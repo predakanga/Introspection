@@ -37,9 +37,12 @@ require_once("VariableInfo.php");
  */
 class FunctionInfo extends PairConsumer {
     protected $handlers = array(T_VARIABLE => 'argHandler');
+    protected $funcModifiers;
     
     public function __construct(ArrayIterator $iter) {
-        $modifiers = $this->lookBehind($iter, $this->modifiers);
+        $this->funcModifiers = $this->lookBehind($iter, $this->modifiers);
+        // Prepend the modifiers to the list
+        $this->list = array_merge($this->funcModifiers, $this->list);
         
         $this->list[] = $iter->current();
         $funcName = $this->nextToken($iter);

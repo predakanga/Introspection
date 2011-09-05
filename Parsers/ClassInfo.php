@@ -44,12 +44,14 @@ class ClassInfo extends PairConsumer {
     protected $name;
     protected $implements;
     protected $extends;
-    protected $modifiers;
+    protected $classModifiers;
     
     public function __construct(ArrayIterator $iter) {
         $this->quietTokens = array_merge($this->quietTokens, array('{', '}'));
         
-        $this->modifiers = $this->lookBehind($iter, $this->modifiers);
+        $this->classModifiers = $this->lookBehind($iter, $this->modifiers);
+        // Prepend the modifiers to the list
+        $this->list = array_merge($this->classModifiers, $this->list);
         
         $this->list[] = $iter->current();
         $className = $this->nextToken($iter);

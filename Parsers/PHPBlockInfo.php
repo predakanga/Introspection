@@ -32,6 +32,7 @@ require_once("PairConsumer.php");
 require_once("NamespaceInfo.php");
 require_once("ClassInfo.php");
 require_once("VariableInfo.php");
+require_once("InterfaceInfo.php");
 
 /**
  * Description of PHPBlockInfo
@@ -42,6 +43,7 @@ class PHPBlockInfo extends PairConsumer {
     protected $withEcho = false;
     
     protected $handlers = array(T_CLASS => 'classHandler',
+                                T_INTERFACE => 'interfaceHandler',
                                 T_NAMESPACE => 'namespaceHandler',
                                 T_DECLARE => 'unimpl',
                                 T_FUNCTION => 'unimpl',
@@ -67,6 +69,10 @@ class PHPBlockInfo extends PairConsumer {
     
     protected function classHandler(ArrayIterator $iter) {
         return new ClassInfo($iter);
+    }
+    
+    protected function interfaceHandler(ArrayIterator $iter) {
+        return new InterfaceInfo($iter);
     }
     
     protected function namespaceHandler(ArrayIterator $iter) {

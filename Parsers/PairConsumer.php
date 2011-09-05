@@ -210,6 +210,7 @@ abstract class PairConsumer {
     protected function unimpl(Iterator $iter) {
         echo "WARNING: Unimplemented " . $this->getTokenName($iter->current()) .
              " on " . get_class($this) . "\n";
+        return $iter->current();
     }
     
     public function getSource() {
@@ -222,6 +223,35 @@ abstract class PairConsumer {
             }
         }
         return $source;
+    }
+    
+    protected function readTypes(Iterator $iter, $firstTypeOrTypes) {
+        $tokenTypes = $firstTypeOrTypes;
+        if(!is_array($tokenTypes)) {
+            $tokenTypes = array($firstTypeOrTypes);
+            for($i = 2; $i < count(func_get_args()); $i++)
+                $tokenTypes[] = func_get_arg($i);
+        }
+        
+        
+        $tokens = $this->until($iter, false, $tokenTypes);
+        array_pop($tokens);
+        $this->list = array_merge($this->list, $tokens);
+
+        $toRet = array();
+        $curType = "";
+        foreach($tokens as $token) {
+            if($curType == "" && $this->getTokenType($token) == T_WHITESPACE)
+                continue;
+            if($this->getTokenType($token) == ",") {
+                $toRet[] = $curType;
+                $curType = "";
+            } else {
+                $curType .= $this->getTokenString($token);
+            }
+        }
+        $toRet[] = trim($curType);
+        return $toRet;
     }
 }
 

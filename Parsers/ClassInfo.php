@@ -41,48 +41,32 @@ class ClassInfo extends PairConsumer {
     protected $handlers = array(T_FUNCTION => "functionHandler",
                                 T_VARIABLE => "propertyHandler",
                                 T_CONST => "unimpl");
+    protected $name;
+    protected $implements;
+    protected $extends;
+    protected $modifiers;
     
     public function __construct(ArrayIterator $iter) {
         $this->quietTokens = array_merge($this->quietTokens, array('{', '}'));
         
+        $this->modifiers = $this->lookBehind($iter, $this->modifiers);
+        
         $this->list[] = $iter->current();
         $className = $this->nextToken($iter);
-        $this->className = $this->getTokenString($className[1]);
+        $this->name = $this->getTokenString($className[1]);
         $iter->next();
         
         while($start = $this->expects($iter, T_IMPLEMENTS, T_EXTENDS, '{')) {
             if($this->getTokenType($start) == T_IMPLEMENTS) {
-                $this->implements = array();
-                $implTokens = $this->until($iter, false, T_EXTENDS, '{');
-                array_pop($implTokens);
-                $this->list = array_merge($this->list, $implTokens);
-                
-                $curImpl = "";
-                foreach($implTokens as $token) {
-                    if($this->getTokenType($token) == ",") {
-                        $this->implements[] = $curImpl;
-                    } else {
-                        $curImpl .= $this->getTokenString($token);
-                    }
-                }
-                $this->implements[] = $curImpl;
-                
+                $this->list[] = $iter->current();
+                $this->nextToken($iter, false);
+                $this->implements = $this->readTypes($iter, T_EXTENDS, '{');
+                var_dump($this->implements);
             } elseif($this->getTokenType($start) == T_EXTENDS) {
-                $this->extends = array();
-                $extTokens = $this->until($iter, false, T_IMPLEMENTS, '{');
-                array_pop($extTokens);
-                $this->list = array_merge($this->list, $extTokens);
-                
-                $curExt = "";
-                foreach($extTokens as $token) {
-                    if($this->getTokenType($token) == ",") {
-                        $this->extends[] = $curExt;
-                    } else {
-                        $curExt .= $this->getTokenString($token);
-                    }
-                }
-                $this->extends[] = $curExt;
-                
+                $this->list[] = $iter->current();
+                $this->nextToken($iter, false);
+                $this->extends = $this->readTypes($iter, T_IMPLEMENTS, '{');
+                var_dump($this->extends);
             } else {
                 $classScope = $iter->current();
 

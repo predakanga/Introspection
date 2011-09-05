@@ -47,10 +47,10 @@ class PHPBlockInfo extends PairConsumer {
                                 T_NAMESPACE => 'namespaceHandler',
                                 T_DECLARE => 'unimpl',
                                 T_FUNCTION => 'unimpl',
-                                T_USE => 'unimpl',
+                                T_USE => 'useHandler',
                                 T_VARIABLE => 'variableHandler');
     
-    protected $namespace = null;
+    protected $uses = array();
     
     public function __construct(TypedStatementList $pairs, $withEcho = false) {
         $this->quietTokens = array_merge($this->quietTokens, array(T_OPEN_TAG, T_OPEN_TAG_WITH_ECHO, T_CLOSE_TAG));
@@ -67,16 +67,25 @@ class PHPBlockInfo extends PairConsumer {
         }
     }
     
+    protected function namespaceHandler(ArrayIterator $iter) {
+        return new NamespaceInfo($iter);
+    }
+    
+    protected function useHandler(ArrayIterator $iter) {
+        $this->list[] = $iter->current();
+        $iter->next();
+        $this->uses = array_merge($this->uses, $this->readTypes($iter, ';'));
+        $this->list[] = $iter->current();
+        
+        return null;
+    }
+    
     protected function classHandler(ArrayIterator $iter) {
         return new ClassInfo($iter);
     }
     
     protected function interfaceHandler(ArrayIterator $iter) {
         return new InterfaceInfo($iter);
-    }
-    
-    protected function namespaceHandler(ArrayIterator $iter) {
-        return new NamespaceInfo($iter);
     }
     
     protected function variableHandler(ArrayIterator $iter) {

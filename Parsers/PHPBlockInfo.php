@@ -29,6 +29,7 @@
 
 require_once("TypedStatementList.php");
 require_once("PairConsumer.php");
+require_once("NamespaceInfo.php");
 require_once("ClassInfo.php");
 require_once("VariableInfo.php");
 
@@ -51,37 +52,29 @@ class PHPBlockInfo extends PairConsumer {
     
     public function __construct(TypedStatementList $pairs, $withEcho = false) {
         $this->quietTokens = array_merge($this->quietTokens, array(T_OPEN_TAG, T_OPEN_TAG_WITH_ECHO, T_CLOSE_TAG));
+        
         $this->withEcho = $withEcho;
-        parent::__construct($pairs);
+        // If it's a withEcho php block, just store the pair source
+        if($this->withEcho) {
+            $this->list[] = $pairs;
+            
+            $this->cleanup();
+        } else {
+            // Otherwise, continue normally
+            parent::__construct($pairs);
+        }
     }
     
     protected function classHandler(ArrayIterator $iter) {
-        $modifiers = $this->lookBehind($iter, $this->modifiers);
-        
-        $className = $this->nextToken($iter);
-        $classScope = $this->nextToken($iter);
-        return new ClassInfo($className, $classScope);
+        return new ClassInfo($iter);
     }
     
     protected function namespaceHandler(ArrayIterator $iter) {
-        $iter->next();
-        $nsTokens = $this->until($iter, ';');
-        array_pop($nsTokens);
-        
-        $nsName = "";
-        foreach($nsTokens as $token)
-            $nsName .= $token[1];
-        
-        return "namespace $nsName;";
+        return new NamespaceInfo($iter);
     }
     
     protected function variableHandler(ArrayIterator $iter) {
         return new VariableInfo($iter, ';');
-    }
-    
-    protected function unimpl(ArrayIterator $iter) {
-        echo "WARNING: Unimplemented " . $this->getTokenName($iter->current()) .
-             " on " . get_class($this) . "\n";
     }
 }
 

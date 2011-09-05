@@ -65,8 +65,6 @@ class TypedStatementList implements IteratorAggregate {
                 return;
             } elseif(isset($this->balancers[$token])) {
                 $list[] = new TypedStatementList($iter, $token, $this->balancers[$token]);
-            } elseif($token == T_WHITESPACE) {
-                $iter->next();
             } else {
                 $list[] = array($token, $this->getString($iter));
                 $iter->next();
@@ -78,6 +76,7 @@ class TypedStatementList implements IteratorAggregate {
     
     public function getSource() {
         $source = "";
+//        return "-complex-";
         foreach($this->list as $token) {
             if($token instanceof TypedStatementList) {
                 $source .= $token->getSource();

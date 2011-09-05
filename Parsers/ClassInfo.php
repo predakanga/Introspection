@@ -40,21 +40,63 @@ require_once("VariableInfo.php");
 class ClassInfo extends PairConsumer {
     protected $handlers = array(T_FUNCTION => "functionHandler",
                                 T_VARIABLE => "propertyHandler",
-                                T_CONST => "unimplHandler");
+                                T_CONST => "unimpl");
     
-    public function __construct($name, $scope) {
-        echo "Found a class, {$name[1]}\n";
-        parent::__construct($scope);
+    public function __construct(ArrayIterator $iter) {
+        $this->quietTokens = array_merge($this->quietTokens, array('{', '}'));
+        
+        $this->list[] = $iter->current();
+        $className = $this->nextToken($iter);
+        $this->className = $this->getTokenString($className[1]);
+        $iter->next();
+        
+        while($start = $this->expects($iter, T_IMPLEMENTS, T_EXTENDS, '{')) {
+            if($this->getTokenType($start) == T_IMPLEMENTS) {
+                $this->implements = array();
+                $implTokens = $this->until($iter, false, T_EXTENDS, '{');
+                array_pop($implTokens);
+                $this->list = array_merge($this->list, $implTokens);
+                
+                $curImpl = "";
+                foreach($implTokens as $token) {
+                    if($this->getTokenType($token) == ",") {
+                        $this->implements[] = $curImpl;
+                    } else {
+                        $curImpl .= $this->getTokenString($token);
+                    }
+                }
+                $this->implements[] = $curImpl;
+                
+            } elseif($this->getTokenType($start) == T_EXTENDS) {
+                $this->extends = array();
+                $extTokens = $this->until($iter, false, T_IMPLEMENTS, '{');
+                array_pop($extTokens);
+                $this->list = array_merge($this->list, $extTokens);
+                
+                $curExt = "";
+                foreach($extTokens as $token) {
+                    if($this->getTokenType($token) == ",") {
+                        $this->extends[] = $curExt;
+                    } else {
+                        $curExt .= $this->getTokenString($token);
+                    }
+                }
+                $this->extends[] = $curExt;
+                
+            } else {
+                $classScope = $iter->current();
+
+                $this->handlers += $this->skipModifiers; // Array union operator - who knew?
+
+                parent::__construct($classScope);
+                $iter->next();
+                return;
+            }
+        }
     }
     
     protected function functionHandler(ArrayIterator $iter) {
-        $modifiers = $this->lookBehind($iter, $this->modifiers);
-        
-        $funcName = $this->nextToken($iter);
-        $funcArgs = $this->nextToken($iter);
-        $funcBlock = $this->nextToken($iter);
-        
-        return new FunctionInfo($funcName, $funcArgs, $funcBlock);
+        return new FunctionInfo($iter);
     }
     
     protected function propertyHandler(ArrayIterator $iter) {

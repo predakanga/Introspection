@@ -39,6 +39,12 @@ class FileInfo extends PairConsumer {
     protected $handlers = array(T_OPEN_TAG => 'openTagHandler',
                                 T_OPEN_TAG_WITH_ECHO => 'openTagWithEchoHandler');
     
+    public function __construct(TypedStatementList $pairs) {
+        $this->quietTokens = array_merge($this->quietTokens, array(T_INLINE_HTML));
+        
+        parent::__construct($pairs);
+    }
+    
     public function openTagHandler(ArrayIterator $iter) {
         return new PHPBlockInfo($iter->current());
     }

@@ -35,7 +35,7 @@
 class Introspector {
     public function readFile($file) {
         require_once("Parsers/FileInfo.php");
-        var_dump(FileInfo::parseFile($file));
+        echo FileInfo::parseFile($file)->getSource();
     }
 }
 

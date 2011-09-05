@@ -41,24 +41,28 @@ class VariableInfo extends PairConsumer {
     protected $varDefault;
     
     public function __construct($iter, $end) {
+        $this->list[] = $iter->current();
+        
         $this->varName = $iter->current();
         $this->varModifiers = $this->lookBehind($iter, $this->modifiers);
+        // Prepend the modifiers to the list
+        $this->list = array_merge($this->varModifiers, $this->list);
+        // TODO: Should be able to lookbehind on T_STRING, T_NS_SEPARATOR to
+        // enable type-hinting on function arguments
         $this->varDefault = null;
         $next = $this->nextToken($iter);
         if($next && (strpos($end, $next[0]) === false)) {
-            // Skip over the =
+            // Skip the =
             $iter->next();
-            $remainingTokens = $this->until($iter, $end);
+            $remainingTokens = $this->until($iter, true, $end);
             array_pop($remainingTokens);
+            
             $this->varDefault = "";
             foreach($remainingTokens as $token) {
-                if($token instanceof TypedStatementList)
-                    $this->varDefault .= $token->getSource();
-                else
-                    $this->varDefault .= $token[1];
+                $this->varDefault .= $this->getTokenString($token);
             }
         }
-        //parent::__construct($iter);
+        $this->cleanup();
     }
 }
 

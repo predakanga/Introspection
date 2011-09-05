@@ -28,11 +28,10 @@
  */
 
 header("Content-Type: text/plain");
-echo "Start\n";
+
 require_once("Introspector.php");
 
 $intro = new Introspector();
 $intro->readFile(realpath("../fossil/Compiler.php"));
-echo "Done\n";
 
 ?>

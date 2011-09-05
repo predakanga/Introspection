@@ -38,9 +38,18 @@ require_once("VariableInfo.php");
 class FunctionInfo extends PairConsumer {
     protected $handlers = array(T_VARIABLE => 'argHandler');
     
-    public function __construct($name, $args, $scope) {
-        echo "Found a function, {$name[1]}\n";
-        parent::__construct($args);
+    public function __construct(ArrayIterator $iter) {
+        $modifiers = $this->lookBehind($iter, $this->modifiers);
+        
+        $this->list[] = $iter->current();
+        $funcName = $this->nextToken($iter);
+        
+        $this->quietTokens = array_merge($this->quietTokens, array('(', ')'));
+        
+        $funcArgs = $this->nextToken($iter, false);
+        parent::__construct($funcArgs);
+        
+        $funcBlock = $this->nextToken($iter);
     }
     
     protected function argHandler(ArrayIterator $iter) {

@@ -41,13 +41,32 @@ abstract class PairConsumer {
     
     protected $iter;
     
-    protected $modifiers = array(T_ABSTRACT, T_FINAL, T_PRIVATE, T_PROTECTED, T_PUBLIC, T_STATIC);
-    protected $quietTokens = array(T_ABSTRACT, T_FINAL, T_PRIVATE, T_PROTECTED, T_PUBLIC, T_STATIC);
+    protected $modifiers = array(T_ABSTRACT, T_FINAL, T_PRIVATE, T_PROTECTED, T_PUBLIC, T_STATIC, T_WHITESPACE);
+    protected $skipModifiers = array(T_ABSTRACT => 'skip',
+                                     T_FINAL => 'skip',
+                                     T_PRIVATE => 'skip',
+                                     T_PROTECTED => 'skip',
+                                     T_PUBLIC => 'skip',
+                                     T_STATIC => 'skip');
+    
+    //protected $quietTokens = array(T_ABSTRACT, T_FINAL, T_PRIVATE, T_PROTECTED, T_PUBLIC, T_STATIC);
+    protected $quietTokens = array(T_DOC_COMMENT, T_COMMENT, T_WHITESPACE);
     
     public function __construct(TypedStatementList $pairs) {
         $this->iter = $pairs->getIterator();
         
         $this->parse($this->iter);
+        
+        // After parsing, remove the various parser vars
+        $this->cleanup();
+    }
+    
+    protected function cleanup() {
+        unset($this->handlers);
+        unset($this->iter);
+        unset($this->modifiers);
+        unset($this->skipModifiers);
+        unset($this->quietTokens);
     }
     
     protected function getTokenType($token) {
@@ -57,7 +76,12 @@ abstract class PairConsumer {
     }
     
     protected function getTokenString($token) {
-        
+        if($token instanceof TypedStatementList)
+            return $token->getSource();
+        else if(is_array($token))
+            return $token[1];
+        else
+            return $token;
     }
     
     protected function getTokenName($token) {
@@ -65,29 +89,37 @@ abstract class PairConsumer {
         return @token_name($tokenType) ?: $tokenType;
     }
     
-    public function parse(ArrayIterator $iter) {
+    protected function parse(Iterator $iter) {
         while($next = $this->expects($iter, array_keys($this->handlers), true)) {
             $response =  call_user_method($this->handlers[$this->getTokenType($next)], $this, $iter);
-            $this->list[] = $response;
+            if($response)
+                $this->list[] = $response;
             
             $iter->next();
         }
     }
     
-    public function nextToken($iter) {
+    protected function nextToken(Iterator $iter, $store = true) {
         $iter->next();
         do
         {
             $token = $iter->current();
-            if($token instanceof TypedStatementList || $token[0] != T_WHITESPACE) {
+            $found = false;
+            if($token instanceof TypedStatementList || $token[0] != T_WHITESPACE)
+                $found = true;
+            
+            if(!$found || $store)
+                $this->list[] = $token;
+            
+            if($found)
                 return $token;
-            }
+            
             $iter->next();
         } while($iter->valid());
         return null;
     }
     
-    public function lookBehind(SeekableIterator $iter, $firstTypeOrTypes) {
+    protected function lookBehind(SeekableIterator $iter, $firstTypeOrTypes) {
         $tokenTypes = $firstTypeOrTypes;
         if(!is_array($tokenTypes)) {
             $tokenTypes = array($firstTypeOrTypes);
@@ -105,11 +137,21 @@ abstract class PairConsumer {
             $tokens[] = $token;
         }
         
+        // Trim leading whitespace, if applicable
+        if(in_array(T_WHITESPACE, $tokenTypes)) {
+            for($i = count($tokens); $i > 0; $i--) {
+                if($this->getTokenType($tokens[$i-1]) == T_WHITESPACE)
+                    unset($tokens[$i-1]);
+                else
+                    break;
+            }
+        }
         return array_reverse($tokens);
     }
     
-    public function expects(Iterator $iter, $firstTypeOrTypes) {
+    protected function expects(Iterator $iter, $firstTypeOrTypes) {
         $tokenTypes = $firstTypeOrTypes;
+        
         if(!is_array($tokenTypes)) {
             $tokenTypes = array($firstTypeOrTypes);
             for($i = 2; $i < count(func_get_args()); $i++)
@@ -123,8 +165,11 @@ abstract class PairConsumer {
             if(in_array($tokenType, $tokenTypes))
                 return $token;
             else {
-                if(!in_array($tokenType, $this->quietTokens))
-                    echo "Missing " . (@token_name($tokenType) ?: $tokenType) . " on " . get_class($this) . "\n";
+                $tempList[] = $token;
+                if(!in_array($tokenType, $this->quietTokens)) {
+                    echo "Missing " . (@token_name($tokenType) ?: $tokenType) . " (" . $tokenType . ") on " . get_class($this) . " (not in " . implode(",", $this->quietTokens) . ")\n";
+                    echo $this->getTokenString($token) . "\n";
+                }
                 $this->list[] = $token;
             }
             
@@ -133,7 +178,7 @@ abstract class PairConsumer {
         return null;
     }
     
-    public function until(Iterator $iter, $firstTypeOrTypes) {
+    protected function until(Iterator $iter, $store, $firstTypeOrTypes) {
         $tokenTypes = $firstTypeOrTypes;
         if(!is_array($tokenTypes)) {
             $tokenTypes = array($firstTypeOrTypes);
@@ -149,11 +194,34 @@ abstract class PairConsumer {
             $tokens[] = $token;
             
             if(in_array($tokenType, $tokenTypes))
-                    break;
+                break;
             
             $iter->next();
         }
+        if($store)
+            $this->list = array_merge($this->list, $tokens);
         return $tokens;
+    }
+    
+    protected function skip(Iterator $iter) {
+        return null;
+    }
+    
+    protected function unimpl(Iterator $iter) {
+        echo "WARNING: Unimplemented " . $this->getTokenName($iter->current()) .
+             " on " . get_class($this) . "\n";
+    }
+    
+    public function getSource() {
+        $source = "";
+        foreach($this->list as $token) {
+            if($token instanceof TypedStatementList || $token instanceof PairConsumer) {
+                $source .= $token->getSource();
+            } else {
+                $source .= $token[1];
+            }
+        }
+        return $source;
     }
 }
 

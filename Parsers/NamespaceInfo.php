@@ -27,13 +27,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+require_once("TypedStatementList.php");
+require_once("PairConsumer.php");
+require_once("PHPBlockInfo.php");
+
 /**
  * Description of NamespaceInfo
  *
  * @author predakanga
  */
-class NamespaceInfo {
-    //put your code here
+class NamespaceInfo extends PairConsumer {
+    public function __construct(ArrayIterator $iter) {
+        // Store the current token
+        $this->list[] = $iter->current();
+        $iter->next();
+        
+        $nsTokens = $this->until($iter, true, ';', '{');
+        
+        $end = array_pop($nsTokens);
+        
+        $nsName = "";
+        foreach($nsTokens as $token)
+            $nsName .= $token[1];
+        
+        $this->name = $nsName;
+        if($end instanceof TypedStatementList) {
+            $this->block = $end;
+        }
+        
+        $this->cleanup();
+    }
 }
 
 ?>

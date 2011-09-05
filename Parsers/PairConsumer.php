@@ -253,6 +253,10 @@ abstract class PairConsumer {
         $toRet[] = trim($curType);
         return $toRet;
     }
+    
+    public function getListSize() {
+        return count($this->list);
+    }
 }
 
 ?>

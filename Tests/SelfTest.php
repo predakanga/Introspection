@@ -61,6 +61,17 @@ class SelfTest extends PHPUnit_Framework_TestCase {
     protected $files;
     protected $introspector;
     
+    protected function assertIdenticalArray($expected, $actual) {
+        // First, check that they're the same size
+        $this->assertEquals(count($expected), count($actual), "Expected and actual arrays don't match in size");
+        
+        foreach($expected as $key => $value) {
+            if($actual[$key] != $value) {
+                $this->fail("Arrays differ at key $key");
+            }
+        }
+    }
+    
     private function stripWhitespaceTokens($input) {
         if(is_array($input) && $input[0] == T_WHITESPACE)
             return false;
@@ -73,102 +84,90 @@ class SelfTest extends PHPUnit_Framework_TestCase {
         return $input;
     }
     
-    protected function setUp() {
+    public function provider() {
         $dirIter = new \RecursiveDirectoryIterator(__DIR__ . D_S . "..");
         $filterIter = new SourceDirectoryFilter($dirIter);
         $iterIter = new \RecursiveIteratorIterator($filterIter);
         $regexIter = new \RegexIterator($iterIter, '/\\.php$/');
         
-        $this->files = array_map(function($fileInfo) {
-            return realpath($fileInfo->getPathname());
+        return array_map(function($fileInfo) {
+            return array(realpath($fileInfo->getPathname()));
         }, iterator_to_array($regexIter, false));
-        
+    }
+    
+    protected function setUp() {
         require_once(__DIR__ . D_S . ".." . D_S . "Introspector.php");
         $this->introspector = new Introspector();
     }
     
-    public function testCompileOwnFiles() {
-        foreach($this->files as $file) {
-            echo "Parsing $file\n";
+    /**
+     * @dataProvider provider
+     */
+    public function testCompileOwnFiles($file) {
             $result = $this->introspector->readFile($file);
             $this->assertNotNull($result);
-            $this->assertGreaterThan(0, $result->getListSize(), "File $file was parsed to nothing.");
-        }
-    }
-    
-    protected function assertIdenticalArray($expected, $actual) {
-        // First, check that they're the same size
-        $this->assertEquals(count($expected), count($actual), "Expected and actual arrays don't match in size");
-        
-        foreach($expected as $key => $value) {
-            if($actual[$key] != $value) {
-                $this->fail("Arrays differ at key $key");
-            }
-        }
+            $this->assertGreaterThan(0, $result->getListSize(), "Could not parse file, or file was empty.");
     }
     
     /**
      * @depends testCompileOwnFiles
+     * @dataProvider provider
      */
-    public function testAccurateCompilationNoWS() {
-        foreach($this->files as $file) {
-            $parsedSrc = $this->introspector->readFile($file)->getSource();
-            $origSrc = file_get_contents($file);
-            
-            $origTokens = token_get_all($origSrc);
-            $parsedTokens = token_get_all($parsedSrc);
-            
-            $strippedOrig = array_filter($origTokens, array($this, 'stripWhitespaceTokens'));
-            $strippedParsed = array_filter($parsedTokens, array($this, 'stripWhitespaceTokens'));
-            
-            $strippedOrig = array_map(array($this, 'stripLineNumbers'), $strippedOrig);
-            $strippedParsed = array_map(array($this, 'stripLineNumbers'), $strippedParsed);
-            
-            $strippedOrig = array_values($strippedOrig);
-            $strippedParsed = array_values($strippedParsed);
-            
-            try {
-                $this->assertIdenticalArray($strippedOrig, $strippedParsed);
-            } catch(Exception $e) {
-                echo "Was in file $file\n";
-                var_dump($strippedOrig);
-                var_dump($strippedParsed);
-                throw $e;
-            }
+    public function testAccurateCompilationNoWS($file) {
+        $parsedSrc = $this->introspector->readFile($file)->getSource();
+        $origSrc = file_get_contents($file);
+
+        $origTokens = token_get_all($origSrc);
+        $parsedTokens = token_get_all($parsedSrc);
+
+        $strippedOrig = array_filter($origTokens, array($this, 'stripWhitespaceTokens'));
+        $strippedParsed = array_filter($parsedTokens, array($this, 'stripWhitespaceTokens'));
+
+        $strippedOrig = array_map(array($this, 'stripLineNumbers'), $strippedOrig);
+        $strippedParsed = array_map(array($this, 'stripLineNumbers'), $strippedParsed);
+
+        $strippedOrig = array_values($strippedOrig);
+        $strippedParsed = array_values($strippedParsed);
+
+        try {
+            $this->assertIdenticalArray($strippedOrig, $strippedParsed);
+        } catch(Exception $e) {
+            echo "Was in file $file\n";
+            var_dump($strippedOrig);
+            var_dump($strippedParsed);
+            throw $e;
         }
     }
     
     /**
      * @depends testAccurateCompilationNoWS
+     * @dataProvider provider
      */
-    public function testAccurateCompilationWithWS() {
-        foreach($this->files as $file) {
-            $parsedSrc = $this->introspector->readFile($file)->getSource();
-            $origSrc = file_get_contents($file);
-            
-            $origTokens = token_get_all($origSrc);
-            $parsedTokens = token_get_all($parsedSrc);
-            
-            $strippedOrig = array_map(array($this, 'stripLineNumbers'), $origTokens);
-            $strippedParsed = array_map(array($this, 'stripLineNumbers'), $parsedTokens);
-            
-            $this->assertIdenticalArray($strippedOrig, $strippedParsed);
-        }
+    public function testAccurateCompilationWithWS($file) {
+        $parsedSrc = $this->introspector->readFile($file)->getSource();
+        $origSrc = file_get_contents($file);
+
+        $origTokens = token_get_all($origSrc);
+        $parsedTokens = token_get_all($parsedSrc);
+
+        $strippedOrig = array_map(array($this, 'stripLineNumbers'), $origTokens);
+        $strippedParsed = array_map(array($this, 'stripLineNumbers'), $parsedTokens);
+
+        $this->assertIdenticalArray($strippedOrig, $strippedParsed);
     }
     
     /**
      * @depends testAccurateCompilationWithWS
+     * @dataProvider provider
      */
-    public function testCompletelyAccurateCompilation() {
-        foreach($this->files as $file) {
-            $parsedSrc = $this->introspector->readFile($file)->getSource();
-            $origSrc = file_get_contents($file);
-            
-            $origTokens = token_get_all($origSrc);
-            $parsedTokens = token_get_all($parsedSrc);
-            
-            $this->assertIdenticalArray($origTokens, $parsedTokens);
-        }
+    public function testCompletelyAccurateCompilation($file) {
+        $parsedSrc = $this->introspector->readFile($file)->getSource();
+        $origSrc = file_get_contents($file);
+
+        $origTokens = token_get_all($origSrc);
+        $parsedTokens = token_get_all($parsedSrc);
+
+        $this->assertIdenticalArray($origTokens, $parsedTokens);
     }
 }
 

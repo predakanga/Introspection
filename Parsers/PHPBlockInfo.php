@@ -53,6 +53,8 @@ class PHPBlockInfo extends PairConsumer {
     protected $uses = array();
     
     public function __construct(TypedStatementList $pairs, $withEcho = false) {
+        $this->handlers += $this->skipModifiers;
+        
         $this->quietTokens = array_merge($this->quietTokens, array(T_OPEN_TAG, T_OPEN_TAG_WITH_ECHO, T_CLOSE_TAG));
         
         $this->withEcho = $withEcho;

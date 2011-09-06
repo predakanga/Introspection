@@ -27,30 +27,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-class SourceDirectoryFilter extends \RecursiveFilterIterator {
-	public static $DIR_FILTERS = array('.git',
-                                       'libs',
-                                       'plugins',
-                                       'compiled',
-                                       'templates_c',
-                                       'scratch');
-    // Use of require_once filters index.php, so this is all we need to worry about
-    public static $FILE_FILTERS = array();
-	
-	public function accept() {
-		if($this->current()->isDir())
-            return !in_array($this->current()->getFilename(),
-                             self::$DIR_FILTERS,
-                             true);
-        else
-            return !in_array($this->current()->getFilename(),
-                             self::$FILE_FILTERS,
-                             true);
-	}
-}
-
-if(!defined("D_S"))
-    define("D_S", DIRECTORY_SEPARATOR);
+require_once("Common.php");
 
 /**
  * Description of SelfTest
@@ -104,7 +81,7 @@ class SelfTest extends PHPUnit_Framework_TestCase {
      * @dataProvider provider
      */
     public function testCompileOwnFiles($file) {
-            $result = $this->introspector->readFile($file);
+            $result = $this->introspector->parseFile($file);
             $this->assertNotNull($result);
             $this->assertGreaterThan(0, $result->getListSize(), "Could not parse file, or file was empty.");
     }
@@ -114,7 +91,7 @@ class SelfTest extends PHPUnit_Framework_TestCase {
      * @dataProvider provider
      */
     public function testAccurateCompilationNoWS($file) {
-        $parsedSrc = $this->introspector->readFile($file)->getSource();
+        $parsedSrc = $this->introspector->parseFile($file)->getSource();
         $origSrc = file_get_contents($file);
 
         $origTokens = token_get_all($origSrc);
@@ -144,7 +121,7 @@ class SelfTest extends PHPUnit_Framework_TestCase {
      * @dataProvider provider
      */
     public function testAccurateCompilationWithWS($file) {
-        $parsedSrc = $this->introspector->readFile($file)->getSource();
+        $parsedSrc = $this->introspector->parseFile($file)->getSource();
         $origSrc = file_get_contents($file);
 
         $origTokens = token_get_all($origSrc);
@@ -161,7 +138,7 @@ class SelfTest extends PHPUnit_Framework_TestCase {
      * @dataProvider provider
      */
     public function testCompletelyAccurateCompilation($file) {
-        $parsedSrc = $this->introspector->readFile($file)->getSource();
+        $parsedSrc = $this->introspector->parseFile($file)->getSource();
         $origSrc = file_get_contents($file);
 
         $origTokens = token_get_all($origSrc);

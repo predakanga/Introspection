@@ -36,6 +36,8 @@ require_once("TypedStatementList.php");
  */
 abstract class PairConsumer {
     protected $list = array();
+    public $name;
+    protected $parent;
     
     protected $handlers = array();
     
@@ -166,10 +168,10 @@ abstract class PairConsumer {
                 return $token;
             else {
                 $tempList[] = $token;
-                if(!in_array($tokenType, $this->quietTokens)) {
-                    echo "Missing " . (@token_name($tokenType) ?: $tokenType) . " (" . $tokenType . ") on " . get_class($this) . " (not in " . implode(",", $this->quietTokens) . ")\n";
-                    echo $this->getTokenString($token) . "\n";
-                }
+//                if(!in_array($tokenType, $this->quietTokens)) {
+//                    echo "Missing " . (@token_name($tokenType) ?: $tokenType) . " (" . $tokenType . ") on " . get_class($this) . " (not in " . implode(",", $this->quietTokens) . ")\n";
+//                    echo $this->getTokenString($token) . "\n";
+//                }
                 $this->list[] = $token;
             }
             
@@ -208,8 +210,8 @@ abstract class PairConsumer {
     }
     
     protected function unimpl(Iterator $iter) {
-        echo "WARNING: Unimplemented " . $this->getTokenName($iter->current()) .
-             " on " . get_class($this) . "\n";
+        //echo "WARNING: Unimplemented " . $this->getTokenName($iter->current()) .
+        //     " on " . get_class($this) . "\n";
         return $iter->current();
     }
     
@@ -256,6 +258,42 @@ abstract class PairConsumer {
     
     public function getListSize() {
         return count($this->list);
+    }
+    
+    public function findClass($className) {
+        foreach($this->findObjects("class", true) as $class) {
+            if($class->name == $className)
+                return $class;
+        }
+        return null;
+    }
+    
+    public function findObjects($type, $recurse = false) {
+        $toRet = array();
+        
+        foreach($this->list as $item) {
+            if($type == "class" && $item instanceof ClassInfo && !($item instanceof InterfaceInfo)) {
+                $toRet[] = $item;
+            } elseif($type == "interface" && $item instanceof InterfaceInfo) {
+                $toRet[] = $item;
+            } elseif($type == "function" && $item instanceof FunctionInfo) {
+                $toRet[] = $item;
+            } elseif($type == "variable" && $item instanceof VariableInfo) {
+                $toRet[] = $item;
+            } elseif($type == "namespace" && $item instanceof NamespaceInfo) {
+                $toRet[] = $item;
+            } elseif($type == "php" && $item instanceof PHPBlockInfo) {
+                $toRet[] = $item;
+            } elseif($item instanceof PairConsumer && $recurse) {
+                $toRet = array_merge($toRet, $item->findObjects($type));
+            }
+        }
+        
+        return $toRet;
+    }
+    
+    public function getParent() {
+        return $this->parent;
     }
 }
 

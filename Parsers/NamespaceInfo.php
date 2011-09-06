@@ -37,7 +37,11 @@ require_once("PHPBlockInfo.php");
  * @author predakanga
  */
 class NamespaceInfo extends PairConsumer {
-    public function __construct(ArrayIterator $iter) {
+    protected $block;
+    
+    public function __construct(ArrayIterator $iter, PairConsumer $parent) {
+        $this->parent = $parent;
+        
         // Store the current token
         $this->list[] = $iter->current();
         $iter->next();
@@ -46,16 +50,19 @@ class NamespaceInfo extends PairConsumer {
         
         $end = array_pop($nsTokens);
         
-        $nsName = "";
+        $this->name = "";
         foreach($nsTokens as $token)
-            $nsName .= $token[1];
+            $this->name .= $token[1];
         
-        $this->name = $nsName;
         if($end instanceof TypedStatementList) {
             $this->block = $end;
         }
         
         $this->cleanup();
+    }
+    
+    public function getBlock() {
+        return $this->block;
     }
 }
 

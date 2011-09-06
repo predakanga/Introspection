@@ -76,7 +76,6 @@ class TypedStatementList implements IteratorAggregate {
     
     public function getSource() {
         $source = "";
-//        return "-complex-";
         foreach($this->list as $token) {
             if($token instanceof TypedStatementList) {
                 $source .= $token->getSource();

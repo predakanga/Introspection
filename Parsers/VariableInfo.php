@@ -37,13 +37,14 @@ require_once("PairConsumer.php");
  */
 class VariableInfo extends PairConsumer {
     protected $varModifiers;
-    protected $varName;
     protected $varDefault;
     
-    public function __construct($iter, $end) {
+    public function __construct(ArrayIterator $iter, PairConsumer $parent, $end) {
+        $this->parent = $parent;
         $this->list[] = $iter->current();
         
-        $this->varName = $iter->current();
+        $this->name = $this->getTokenString($iter->current());
+        
         $this->varModifiers = $this->lookBehind($iter, $this->modifiers);
         // Prepend the modifiers to the list
         $this->list = array_merge($this->varModifiers, $this->list);
@@ -63,6 +64,18 @@ class VariableInfo extends PairConsumer {
             }
         }
         $this->cleanup();
+    }
+    
+    public function getModifiers() {
+        return $this->varModifiers;
+    }
+    
+    public function getDefault() {
+        return $this->varDefault;
+    }
+    
+    public function getIsReference() {
+        return ($this->name[0] == "&");
     }
 }
 

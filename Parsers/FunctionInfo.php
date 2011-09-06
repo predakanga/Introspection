@@ -38,25 +38,65 @@ require_once("VariableInfo.php");
 class FunctionInfo extends PairConsumer {
     protected $handlers = array(T_VARIABLE => 'argHandler');
     protected $funcModifiers;
+    protected $funcBlock;
     
-    public function __construct(ArrayIterator $iter) {
+    public function __construct(ArrayIterator $iter, PairConsumer $parent) {
+        $this->parent = $parent;
+        
         $this->funcModifiers = $this->lookBehind($iter, $this->modifiers);
         // Prepend the modifiers to the list
         $this->list = array_merge($this->funcModifiers, $this->list);
         
         $this->list[] = $iter->current();
-        $funcName = $this->nextToken($iter);
+        $iter->next();
+        
+        $funcNameTokens = $this->until($iter, false, '(');
+        $funcArgs = array_pop($funcNameTokens);
+        
+        $this->list = array_merge($this->list, $funcNameTokens);
+        
+        $this->name = "";
+        foreach($funcNameTokens as $token) {
+            $this->name .= $this->getTokenString($token);
+        }
         
         $this->quietTokens = array_merge($this->quietTokens, array('(', ')'));
         
-        $funcArgs = $this->nextToken($iter, false);
         parent::__construct($funcArgs);
         
-        $funcBlock = $this->nextToken($iter);
+        $this->funcBlock = $this->nextToken($iter);
     }
     
     protected function argHandler(ArrayIterator $iter) {
-        return new VariableInfo($iter, ",)");
+        return new VariableInfo($iter, $this, ",)");
+    }
+    
+    public function getArguments() {
+        return $this->findObjects("variable");
+    }
+    
+    public function getArgument($name) {
+        foreach($this->getArguments() as $arg) {
+            $argName = $arg->name;
+            if($argName[0] == "&")
+                $argName = substr($argName, 1);
+            
+            if($argName == $name)
+                return $arg;
+        }
+        return null;
+    }
+    
+    public function getModifiers() {
+        return $this->funcModifiers;
+    }
+    
+    public function getReturnsReference() {
+        return ($this->name[0] == "&");
+    }
+    
+    public function getBlock() {
+        return $this->funcBlock;
     }
 }
 

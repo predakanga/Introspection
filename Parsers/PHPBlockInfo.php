@@ -41,6 +41,7 @@ require_once("InterfaceInfo.php");
  */
 class PHPBlockInfo extends PairConsumer {
     protected $withEcho = false;
+    protected $defaultNamespace = null;
     
     protected $handlers = array(T_CLASS => 'classHandler',
                                 T_INTERFACE => 'interfaceHandler',
@@ -52,7 +53,8 @@ class PHPBlockInfo extends PairConsumer {
     
     protected $uses = array();
     
-    public function __construct(TypedStatementList $pairs, $withEcho = false) {
+    public function __construct(TypedStatementList $pairs, PairConsumer $parent, $withEcho = false) {
+        $this->parent = $parent;
         $this->handlers += $this->skipModifiers;
         
         $this->quietTokens = array_merge($this->quietTokens, array(T_OPEN_TAG, T_OPEN_TAG_WITH_ECHO, T_CLOSE_TAG));
@@ -70,7 +72,11 @@ class PHPBlockInfo extends PairConsumer {
     }
     
     protected function namespaceHandler(ArrayIterator $iter) {
-        return new NamespaceInfo($iter);
+        $ns = new NamespaceInfo($iter, $this);
+        if(!$ns->getBlock()) {
+            $this->defaultNamespace = $ns;
+        }
+        return $ns;
     }
     
     protected function useHandler(ArrayIterator $iter) {
@@ -83,15 +89,77 @@ class PHPBlockInfo extends PairConsumer {
     }
     
     protected function classHandler(ArrayIterator $iter) {
-        return new ClassInfo($iter);
+        return new ClassInfo($iter, $this);
     }
     
     protected function interfaceHandler(ArrayIterator $iter) {
-        return new InterfaceInfo($iter);
+        return new InterfaceInfo($iter, $this);
     }
     
     protected function variableHandler(ArrayIterator $iter) {
-        return new VariableInfo($iter, ';');
+        return new VariableInfo($iter, $this, ';');
+    }
+    
+    public function getDefaultNamespace() {
+        return $this->defaultNamespace;
+    }
+    
+    public function getNamespaces() {
+        return $this->findObjects("namespace");
+    }
+    
+    public function getNamespace($name) {
+        foreach($this->getNamespaces() as $ns) {
+            if($ns->name == $name)
+                return $ns;
+        }
+    }
+    
+    public function getUses() {
+        return $this->uses;
+    }
+    
+    public function getClasses() {
+        return $this->findObjects("class");
+    }
+    
+    public function getClass($name) {
+        foreach($this->getClasses() as $class) {
+            if($class->name == $name)
+                return $class;
+        }
+        return null;
+    }
+    
+    public function getFunctions() {
+        return $this->findObjects("function");
+    }
+    
+    public function getFunction($name) {
+        foreach($this->getFunctions() as $func) {
+            $funcName = $func->name;
+            if($funcName[0] == "&")
+                $funcName = substr($funcName, 1);
+            
+            if($funcName == $name)
+                return $func;
+        }
+        return null;
+    }
+    
+    public function getVariables() {
+        return $this->findObjects("variable");
+    }
+    
+    public function getVariable($name) {
+        foreach($this->getVariables() as $var) {
+            if($var->name == $name)
+                return $var;
+        }
+    }
+    
+    public function getWithEcho() {
+        return $this->withEcho;
     }
 }
 

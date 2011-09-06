@@ -33,9 +33,26 @@
  * @author predakanga
  */
 class Introspector {
-    public function readFile($file) {
+    /**
+     * @return FileInfo
+     */
+    public function parseFile($file) {
         require_once("Parsers/FileInfo.php");
         return FileInfo::parseFile($file);
+    }
+    
+    public function parseClass($class, $file = null) {
+        // Attempt to find the file if none is provided
+        if(!$file) {
+            try {
+                $reflClass = new ReflectionClass($class);
+                $file = $reflClass->getFileName();
+            } catch(Exception $e) {
+                return null;
+            }
+        }
+        $fileInfo = $this->parseFile($file);
+        return $fileInfo->findClass($class);
     }
 }
 

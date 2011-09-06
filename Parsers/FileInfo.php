@@ -46,11 +46,11 @@ class FileInfo extends PairConsumer {
     }
     
     public function openTagHandler(ArrayIterator $iter) {
-        return new PHPBlockInfo($iter->current());
+        return new PHPBlockInfo($iter->current(), $this);
     }
     
     public function openTagWithEchoHandler(ArrayIterator $iter) {
-        return new PHPBlockInfo($iter->current(), true);
+        return new PHPBlockInfo($iter->current(), $this, true);
     }
     
     public static function parseFile($file) {
@@ -59,6 +59,10 @@ class FileInfo extends PairConsumer {
         $pairs = new TypedStatementList($iter);
         
         return new FileInfo($pairs);
+    }
+    
+    public function getPHPBlocks() {
+        return $this->findObjects("php");
     }
 }
 

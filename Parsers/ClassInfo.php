@@ -41,12 +41,13 @@ class ClassInfo extends PairConsumer {
     protected $handlers = array(T_FUNCTION => "functionHandler",
                                 T_VARIABLE => "propertyHandler",
                                 T_CONST => "unimpl");
-    protected $name;
+    
     protected $implements;
     protected $extends;
     protected $classModifiers;
     
-    public function __construct(ArrayIterator $iter) {
+    public function __construct(ArrayIterator $iter, PairConsumer $parent) {
+        $this->parent = $parent;
         $this->quietTokens = array_merge($this->quietTokens, array('{', '}'));
         
         $this->classModifiers = $this->lookBehind($iter, $this->modifiers);
@@ -63,12 +64,10 @@ class ClassInfo extends PairConsumer {
                 $this->list[] = $iter->current();
                 $this->nextToken($iter, false);
                 $this->implements = $this->readTypes($iter, T_EXTENDS, '{');
-                var_dump($this->implements);
             } elseif($this->getTokenType($start) == T_EXTENDS) {
                 $this->list[] = $iter->current();
                 $this->nextToken($iter, false);
                 $this->extends = $this->readTypes($iter, T_IMPLEMENTS, '{');
-                var_dump($this->extends);
             } else {
                 $classScope = $iter->current();
 
@@ -82,11 +81,51 @@ class ClassInfo extends PairConsumer {
     }
     
     protected function functionHandler(ArrayIterator $iter) {
-        return new FunctionInfo($iter);
+        return new FunctionInfo($iter, $this);
     }
     
     protected function propertyHandler(ArrayIterator $iter) {
-        return new VariableInfo($iter, ';');
+        return new VariableInfo($iter, $this, ';');
+    }
+    
+    public function getImplements() {
+        return $this->implements;
+    }
+    
+    public function getExtends() {
+        return $this->extends;
+    }
+    
+    public function getModifiers() {
+        return $this->classModifiers;
+    }
+    
+    public function getProperties() {
+        return $this->findObjects("property");
+    }
+    
+    public function getProperty($name) {
+        foreach($this->getProperties() as $prop) {
+            if($prop->name == $name)
+                return $prop;
+        }
+        return null;
+    }
+    
+    public function getMethods() {
+        return $this->findObjects("function");
+    }
+    
+    public function getMethod($name) {
+        foreach($this->getFunctions() as $func) {
+            $funcName = $func->name;
+            if($funcName[0] == "&")
+                $funcName = substr($funcName, 1);
+            
+            if($funcName == $name)
+                return $func;
+        }
+        return null;
     }
 }
 

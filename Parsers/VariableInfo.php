@@ -63,6 +63,11 @@ class VariableInfo extends PairConsumer {
                 $this->varDefault .= $this->getTokenString($token);
             }
         }
+        // HACKHACK
+        elseif($parent instanceof FunctionInfo) {
+            array_pop($this->list);
+            $iter->seek($iter->key()-1);
+        }
         $this->cleanup();
     }
     

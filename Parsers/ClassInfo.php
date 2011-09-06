@@ -117,7 +117,7 @@ class ClassInfo extends PairConsumer {
     }
     
     public function getMethod($name) {
-        foreach($this->getFunctions() as $func) {
+        foreach($this->getMethods() as $func) {
             $funcName = $func->name;
             if($funcName[0] == "&")
                 $funcName = substr($funcName, 1);

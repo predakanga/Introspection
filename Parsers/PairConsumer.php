@@ -93,7 +93,7 @@ abstract class PairConsumer {
     
     protected function parse(Iterator $iter) {
         while($next = $this->expects($iter, array_keys($this->handlers), true)) {
-            $response =  call_user_method($this->handlers[$this->getTokenType($next)], $this, $iter);
+            $response = call_user_func(array($this, $this->handlers[$this->getTokenType($next)]), $iter);
             if($response)
                 $this->list[] = $response;
             

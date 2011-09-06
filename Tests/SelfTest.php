@@ -106,14 +106,7 @@ class SelfTest extends PHPUnit_Framework_TestCase {
         $strippedOrig = array_values($strippedOrig);
         $strippedParsed = array_values($strippedParsed);
 
-        try {
-            $this->assertIdenticalArray($strippedOrig, $strippedParsed);
-        } catch(Exception $e) {
-            echo "Was in file $file\n";
-            var_dump($strippedOrig);
-            var_dump($strippedParsed);
-            throw $e;
-        }
+        $this->assertIdenticalArray($strippedOrig, $strippedParsed);
     }
     
     /**

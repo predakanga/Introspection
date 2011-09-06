@@ -50,6 +50,10 @@ class FunctionInfo extends PairConsumer {
         $this->list[] = $iter->current();
         $iter->next();
         
+        while($this->getTokenType($iter->current()) == T_WHITESPACE) {
+            $this->list[] = $iter->current();
+            $iter->next();
+        }
         $funcNameTokens = $this->until($iter, false, '(');
         $funcArgs = array_pop($funcNameTokens);
         

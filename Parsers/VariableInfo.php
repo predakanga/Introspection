@@ -38,6 +38,7 @@ require_once("PairConsumer.php");
 class VariableInfo extends PairConsumer {
     protected $varModifiers;
     protected $varDefault;
+    protected $varType;
     
     public function __construct(ArrayIterator $iter, PairConsumer $parent, $end) {
         $this->parent = $parent;
@@ -45,6 +46,16 @@ class VariableInfo extends PairConsumer {
         
         $this->name = $this->getTokenString($iter->current());
         
+        if($parent instanceof FunctionInfo) {
+            //echo("Parent is a funcinfo\n");
+            $typeTokens = $this->lookBehind($iter, array(T_STRING, T_NS_SEPARATOR, T_WHITESPACE));
+            //array_pop($typeTokens);
+            $this->varType = "";
+            foreach($typeTokens as $token) {
+                $this->varType .= $this->getTokenString($token);
+            }
+            $this->list = array_merge($typeTokens, $this->list);
+        }
         $this->varModifiers = $this->lookBehind($iter, $this->modifiers);
         // Prepend the modifiers to the list
         $this->list = array_merge($this->varModifiers, $this->list);
@@ -81,6 +92,10 @@ class VariableInfo extends PairConsumer {
     
     public function getIsReference() {
         return ($this->name[0] == "&");
+    }
+    
+    public function getType() {
+        return $this->varType;
     }
 }
 

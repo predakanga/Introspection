@@ -50,6 +50,8 @@ abstract class PairConsumer {
                                      T_PROTECTED => 'skip',
                                      T_PUBLIC => 'skip',
                                      T_STATIC => 'skip');
+    protected $skipType = array(T_STRING => 'skip',
+                                T_NS_SEPARATOR => 'skip');
     
     //protected $quietTokens = array(T_ABSTRACT, T_FINAL, T_PRIVATE, T_PROTECTED, T_PUBLIC, T_STATIC);
     protected $quietTokens = array(T_DOC_COMMENT, T_COMMENT, T_WHITESPACE);

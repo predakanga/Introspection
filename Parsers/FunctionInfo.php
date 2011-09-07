@@ -65,6 +65,7 @@ class FunctionInfo extends PairConsumer {
         }
         
         $this->quietTokens = array_merge($this->quietTokens, array('(', ')'));
+        $this->handlers += $this->skipType;
         
         parent::__construct($funcArgs);
         
